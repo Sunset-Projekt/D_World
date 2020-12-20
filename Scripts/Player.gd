@@ -1,4 +1,4 @@
-extends KinematicBody2D
+extends "res://Scripts/ADAM.gd"
 
 enum States { 
 	IN_AIR, 
@@ -7,30 +7,37 @@ enum States {
 	DEAD
 }
 
-onready var sprite = $Sprite
-onready var animation = $AnimationPlayer
-onready var player = $AudioStreamPlayer2D
-onready var cast = $RayCast2D
-onready var other_cast = $RayCast2D2
-onready var suka = get_node("/root/World/Enemy")
-
-var current_state = States.ON_FLOOR
-var second_jump = false
-var dash_state = true
-var velocity: Vector2 = Vector2.ZERO
-var GRAVITY = 200
-var MOVE_SPEED = 120 
 
 const JUMP_POWER = 128
 const ACCELERATION = 500
 const FRICTION = 0.25
 const AIR_RESISTANCE = 0.02
 
-var health = 100
+
+onready var player = $AudioStreamPlayer2D
+onready var MDP = $Melee_Damage_Pos
+onready var cast = $RayCast2D
+onready var other_cast = $RayCast2D2
+onready var suka = get_node("/root/World/Level/Enemy")
+
+
+var current_state = States.ON_FLOOR
+var second_jump = false
+var dash_state = true
+var velocity: Vector2 = Vector2.ZERO
+var MOVE_SPEED = 120 
+var current_damage = 20
+
+
+func _ready():
+	add_to_group(GlobalVars.entity_group)
+	self.health_points = 150
+	self.max_health_points = 150
+	set_start_hp(self.health_points, self.max_health_points)
 
 
 func update_state():
-	if health > 0:
+	if self.health_points > 0:
 		if is_on_floor():
 			current_state = States.ON_FLOOR
 			second_jump = true
@@ -43,8 +50,8 @@ func update_state():
 			current_state = States.IN_AIR
 	else:
 		current_state = States.DEAD
-		
-		
+
+
 func _physics_process(delta):
 	var direction = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
 	var seat_state = Input.is_action_pressed("ui_down") or (cast.is_colliding() or other_cast.is_colliding())
@@ -56,26 +63,34 @@ func _physics_process(delta):
 			jump(delta, direction)
 			dash(delta, direction)
 			my_crush(delta, seat_state)
-			hurt(delta)
 			
 		States.ON_FLOOR:
 			move_character(delta, direction, seat_state)
 			jump(delta, direction)
 			dash(delta, direction)
-			hurt(delta)
 			
 		States.ON_WALL:
 			move_character(delta, direction, seat_state)
 			jump(delta, direction)
 			dash(delta, direction)
-			hurt(delta)
 		States.DEAD:
 			print("DEAD")
+	
+	MDP.position = get_global_mouse_position() - position
+	MDP.position.x = clamp(MDP.position.x, -20, 20)
+	MDP.position.y = clamp(MDP.position.y, -20, 20)
+	
 	velocity.y += GRAVITY * delta
 	velocity = move_and_slide(velocity, Vector2(0, -1))
 	update_state()
-	
-	
+
+
+func _unhandled_input(event):
+	if event.is_action_pressed("left_click"):
+		var a = load("res://Scenes/Melee_Damage_Area.tscn").instance()
+		a.set_damage(current_damage)
+		get_parent().add_child(a)
+		a.position = self.position + MDP.position
 
 
 func move_character(delta, direction, seat_state):
@@ -105,7 +120,7 @@ func move_character(delta, direction, seat_state):
 		$Col_Seat.disabled = true
 
 
-func jump(delta, direction):
+func jump(_delta, direction):
 	if current_state == States.ON_FLOOR:
 		if direction == 0:
 			velocity.x = lerp(velocity.x, 0, FRICTION)
@@ -117,8 +132,8 @@ func jump(delta, direction):
 	else:
 		if Input.is_action_just_released(("ui_up")) and velocity.y < -JUMP_POWER/2:
 			animation.play("Jump")
-			
 			velocity.y = -JUMP_POWER/2
+	
 		if direction == 0:
 			velocity.x = lerp(velocity.x, 0, AIR_RESISTANCE)
 			
@@ -129,7 +144,7 @@ func jump(delta, direction):
 			velocity.y = -JUMP_POWER
 			second_jump = false
 
-func dash(delta, direction):
+func dash(_delta, _direction):
 	if dash_state and Input.is_action_just_pressed("ui_dash"):
 		MOVE_SPEED = 600
 		GRAVITY = 0
@@ -151,11 +166,3 @@ func my_crush(delta, seat_state):
 		GRAVITY = 500
 		velocity.y += GRAVITY * delta + delta
 	GRAVITY = 200
-
-func hurt(delta):
-	pass
-
-
-
-
-

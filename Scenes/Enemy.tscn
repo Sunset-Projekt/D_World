@@ -1,0 +1,68 @@
+[gd_scene load_steps=8 format=2]
+
+[ext_resource path="res://Graphics/enemy.png" type="Texture" id=1]
+[ext_resource path="res://Scripts/Enemy.gd" type="Script" id=2]
+[ext_resource path="res://Scenes/ADAM.tscn" type="PackedScene" id=3]
+
+[sub_resource type="RectangleShape2D" id=1]
+extents = Vector2( 5.80311, 6.43685 )
+
+[sub_resource type="CircleShape2D" id=4]
+radius = 8.24667
+
+[sub_resource type="RectangleShape2D" id=3]
+extents = Vector2( 7.03363, 6.76117 )
+
+[sub_resource type="Animation" id=2]
+resource_name = "Run"
+tracks/0/type = "value"
+tracks/0/path = NodePath("Sprite:frame")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0, 0.5 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ 1, 0 ]
+}
+
+[node name="Enemy" instance=ExtResource( 3 )]
+script = ExtResource( 2 )
+
+[node name="CollisionShape2D" parent="." index="0"]
+position = Vector2( 7.8785, 6.54064 )
+shape = SubResource( 1 )
+
+[node name="Sprite" parent="." index="1"]
+position = Vector2( 7.8378, 6.50054 )
+scale = Vector2( 0.880917, 0.795336 )
+texture = ExtResource( 1 )
+hframes = 4
+frame = 1
+
+[node name="Attackbox" type="Area2D" parent="." index="2"]
+position = Vector2( 7.8785, 6.54064 )
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Attackbox" index="0"]
+shape = SubResource( 4 )
+
+[node name="HP_Bar" parent="." index="3"]
+margin_left = -2.0
+margin_top = -4.0
+margin_right = 18.0
+margin_bottom = -1.0
+value = 50.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox" index="0"]
+position = Vector2( 7.86501, 6.5147 )
+shape = SubResource( 3 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="." index="5"]
+anims/Run = SubResource( 2 )
+
+[node name="Attack_Cooldown" type="Timer" parent="." index="6"]
+[connection signal="area_entered" from="Attackbox" to="." method="_on_Attackbox_area_entered"]
+[connection signal="area_exited" from="Attackbox" to="." method="_on_Attackbox_area_exited"]
+[connection signal="timeout" from="Attack_Cooldown" to="." method="_on_Attack_Cooldown_timeout"]
