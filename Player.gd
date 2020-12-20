@@ -3,13 +3,16 @@ extends KinematicBody2D
 enum States { 
 	IN_AIR, 
 	ON_FLOOR,  
-	ON_WALL 
+	ON_WALL,
+	DEAD
 }
 
 onready var sprite = $Sprite
 onready var animation = $AnimationPlayer
 onready var player = $AudioStreamPlayer2D
-onready var colision = $CollisionShape2D
+onready var cast = $RayCast2D
+onready var other_cast = $RayCast2D2
+onready var suka = get_node("/root/World/Enemy")
 
 var current_state = States.ON_FLOOR
 var second_jump = false
@@ -23,24 +26,28 @@ const ACCELERATION = 500
 const FRICTION = 0.25
 const AIR_RESISTANCE = 0.02
 
+var health = 100
 
 
 func update_state():
-	if is_on_floor():
-		current_state = States.ON_FLOOR
-		second_jump = true
-	elif is_on_wall() and !is_on_floor():
-		current_state = States.ON_WALL
-		second_jump = true
-	elif is_on_wall() and is_on_floor():
-		current_state = States.ON_WALL
+	if health > 0:
+		if is_on_floor():
+			current_state = States.ON_FLOOR
+			second_jump = true
+		elif is_on_wall() and !is_on_floor():
+			current_state = States.ON_WALL
+			second_jump = true
+		elif is_on_wall() and is_on_floor():
+			current_state = States.ON_WALL
+		else:
+			current_state = States.IN_AIR
 	else:
-		current_state = States.IN_AIR
+		current_state = States.DEAD
 		
 		
 func _physics_process(delta):
 	var direction = Input.get_action_strength("ui_right") - Input.get_action_strength("ui_left")
-	var seat_state = Input.is_action_pressed("ui_down")
+	var seat_state = Input.is_action_pressed("ui_down") or (cast.is_colliding() or other_cast.is_colliding())
 	
 	match (current_state):
 		States.IN_AIR:
@@ -49,21 +56,26 @@ func _physics_process(delta):
 			jump(delta, direction)
 			dash(delta, direction)
 			my_crush(delta, seat_state)
+			hurt(delta)
 			
 		States.ON_FLOOR:
 			move_character(delta, direction, seat_state)
 			jump(delta, direction)
 			dash(delta, direction)
+			hurt(delta)
 			
 		States.ON_WALL:
 			move_character(delta, direction, seat_state)
 			jump(delta, direction)
 			dash(delta, direction)
-			
-	
+			hurt(delta)
+		States.DEAD:
+			print("DEAD")
 	velocity.y += GRAVITY * delta
 	velocity = move_and_slide(velocity, Vector2(0, -1))
 	update_state()
+	
+	
 
 
 func move_character(delta, direction, seat_state):
@@ -83,6 +95,7 @@ func move_character(delta, direction, seat_state):
 			velocity.x = clamp(velocity.x , -MOVE_SPEED, MOVE_SPEED)
 			sprite.flip_h = velocity.x < 0
 	elif seat_state:
+		
 		animation.play("Seat_Stay")
 		$Col_Run.disabled = false
 		$Col_Seat.disabled = true
@@ -138,7 +151,11 @@ func my_crush(delta, seat_state):
 		GRAVITY = 500
 		velocity.y += GRAVITY * delta + delta
 	GRAVITY = 200
-		
-	
+
+func hurt(delta):
+	pass
+
+
+
 
 
